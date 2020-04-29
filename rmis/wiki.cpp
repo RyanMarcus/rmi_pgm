@@ -21,11 +21,14 @@ void cleanup() {
 }
 
 inline double cubic(double a, double b, double c, double d, double x) {
-    return (((a * x + b) * x + c) * x) + d;
+    auto v1 = std::fma(a, x, b);
+    auto v2 = std::fma(v1, x, c);
+    auto v3 = std::fma(v2, x, d);
+    return v3;
 }
 
 inline double linear(double alpha, double beta, double inp) {
-    return alpha + beta * inp;
+    return std::fma(beta, inp, alpha);
 }
 
 inline size_t FCLAMP(double inp, double bound) {
