@@ -1,0 +1,6 @@
+CPU is:  Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz
+Dataset,RMI,PGM
+data/books_200M_uint64,348,395
+data/osm_cellids_200M_uint64,553,520
+data/wiki_ts_200M_uint64,377,394
+data/fb_200M_uint64,475,584
