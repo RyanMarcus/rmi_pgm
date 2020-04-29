@@ -1,0 +1,6 @@
+CPU is:  AMD Ryzen 7 3700X 8-Core Processor
+Dataset,RMI,PGM
+data/books_200M_uint64,225,281
+data/osm_cellids_200M_uint64,458,351
+data/wiki_ts_200M_uint64,193,284
+data/fb_200M_uint64,308,366
