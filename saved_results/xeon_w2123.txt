@@ -1,0 +1,6 @@
+CPU is:  Intel(R) Xeon(R) W-2123 CPU @ 3.60GHz
+Dataset,RMI,PGM
+data/books_200M_uint64,275,362
+data/osm_cellids_200M_uint64,480,468
+data/wiki_ts_200M_uint64,250,369
+data/fb_200M_uint64,376,484
