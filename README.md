@@ -5,6 +5,7 @@ The only dependencies are:
 * A C++ compiler with support for C++ 17
 * `xz` compression tool (`pacman -S xz`)
 * `zstd` compression tool (`pacman -S zstd`)
+* `wget` to download files (`pacman -S wget`)
 
 You can execute the benchmark with:
 ```bash
