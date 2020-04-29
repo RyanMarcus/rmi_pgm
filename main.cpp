@@ -113,6 +113,9 @@ void measure_perfomance() {
     size_t lb_position = std::distance(dataset.begin(), lb_result);
     if (lb_position != correct_idx) {
       std::cerr << "RMI returned incorrect result for lookup key " << x << std::endl;
+      std::cerr << "Start: " << start
+                << " Stop: " << stop
+                << " Correct: " << correct_idx << std::endl;
       exit(-1);
     }
     return lb_position;
@@ -129,6 +132,10 @@ void measure_perfomance() {
     size_t lb_position = std::distance(dataset.begin(), lb_result);
     if (lb_position != correct_idx) {
       std::cerr << "PGM returned incorrect result for lookup key " << x << std::endl;
+      std::cerr << "Start: " << approx_range.lo
+                << " Stop: " << approx_range.hi
+                << " Correct: " << correct_idx << std::endl;
+
       exit(-1);
     }
     return lb_position;
@@ -147,7 +154,7 @@ int main(int argc, char **argv) {
         && books::load("rmi_data/")) {
       // RMIs loaded.
     } else {
-      std::cerr << "Failed to oaded RMIs" << std::endl;
+      std::cerr << "Failed to load RMIs" << std::endl;
       exit(-1);
     }
     std::cout << "Dataset,RMI,PGM" << std::endl;

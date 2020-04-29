@@ -1,4 +1,4 @@
-CXX_FLAGS=-std=c++17 -Wall -O3 -march=native -ffast-math
+CXX_FLAGS=-std=c++17 -Wall -O3 -march=native
 RMI_PARAMETERS=rmi_data/books_L1_PARAMETERS rmi_data/fb_L1_PARAMETERS rmi_data/osm_L1_PARAMETERS rmi_data/wiki_L1_PARAMETERS
 
 results.txt: benchmark execute.sh
@@ -13,16 +13,16 @@ rmi_data:
 	mkdir rmi_data
 
 rmi_data/books_L1_PARAMETERS: rmi_data_compressed/books_L1_PARAMETERS.zst rmi_data
-	zstd -d $< -o $@
+	zstd -fd $< -o $@
 
 rmi_data/fb_L1_PARAMETERS: rmi_data_compressed/fb_L1_PARAMETERS.zst rmi_data
-	zstd -d $< -o $@
+	zstd -fd $< -o $@
 
 rmi_data/osm_L1_PARAMETERS: rmi_data_compressed/osm_L1_PARAMETERS.zst rmi_data
-	zstd -d $< -o $@
+	zstd -fd $< -o $@
 
 rmi_data/wiki_L1_PARAMETERS: rmi_data_compressed/wiki_L1_PARAMETERS.zst rmi_data
-	zstd -d $< -o $@
+	zstd -fd $< -o $@
 
 
 
