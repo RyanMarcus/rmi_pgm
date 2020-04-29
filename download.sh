@@ -1,3 +1,4 @@
+#! /usr/bin/bash
 
 # Calculate md5 checksum of FILE and stores it in MD5_RESULT
 function get_checksum() {
