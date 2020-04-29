@@ -7,7 +7,7 @@ results.txt: benchmark execute.sh
 
 benchmark: main.cpp $(RMI_PARAMETERS) rmis/osm.cpp rmis/wiki.cpp rmis/books.cpp rmis/fb.cpp
 	git submodule update --init --recursive
-	g++ $(CXX_FLAGS) main.cpp rmis/fb.cpp rmis/wiki.cpp rmis/osm.cpp rmis/books.cpp -o benchmark
+	clang++ $(CXX_FLAGS) main.cpp rmis/fb.cpp rmis/wiki.cpp rmis/osm.cpp rmis/books.cpp -o benchmark
 
 rmi_data:
 	mkdir rmi_data

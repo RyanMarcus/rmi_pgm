@@ -1,6 +1,7 @@
 #include "osm.h"
 #include "osm_data.h"
 #include <math.h>
+#include <cmath>
 #include <fstream>
 #include <filesystem>
 #include <iostream>

@@ -1,6 +1,7 @@
 #include "books.h"
 #include "books_data.h"
 #include <math.h>
+#include <cmath>
 #include <fstream>
 #include <filesystem>
 #include <iostream>
