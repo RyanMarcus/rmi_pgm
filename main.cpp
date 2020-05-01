@@ -13,6 +13,8 @@
 #include "rmis/books.h"
 #include "PGM-index/include/pgm_index.hpp"
 
+#define BRANCHLESS
+
 using timer = std::chrono::high_resolution_clock;
 
 uint64_t NUM_LOOKUPS = 10000000;
@@ -23,6 +25,23 @@ std::vector<std::string> DATASET_NAMES = {
   "data/wiki_ts_200M_uint64",
   "data/fb_200M_uint64"
 };
+
+// Function taken from https://github.com/gvinciguerra/rmi_pgm/blob/357acf668c22f927660d6ed11a15408f722ea348/main.cpp#L29.
+// Authored by Giorgio Vinciguerra.
+template<class ForwardIt, class T, class Compare = std::less<T>>
+ForwardIt lower_bound_branchless(ForwardIt first, ForwardIt last, const T &value, Compare comp = Compare()) {
+    auto n = std::distance(first, last);
+
+    while (n > 1) {
+        auto half = n / 2;
+        __builtin_prefetch(&*first + half / 2, 0, 0);
+        __builtin_prefetch(&*first + half + half / 2, 0, 0);
+        first = comp(*std::next(first, half), value) ? first + half : first;
+        n -= half;
+    }
+
+    return std::next(first, comp(*first, value));
+}
 
 template<class T>
 void do_not_optimize(T const &value) {
@@ -109,7 +128,12 @@ void measure_perfomance() {
     uint64_t start = (guess < error ? 0 : guess - error);
     uint64_t stop = (guess + error >= data_size_ ? data_size_ : guess + error);
 
+#ifdef BRANCHLESS
+    auto lb_result = lower_bound_branchless(dataset.begin() + start, dataset.begin() + stop, x);
+#else
     auto lb_result = std::lower_bound(dataset.begin() + start, dataset.begin() + stop, x);
+#endif
+
     size_t lb_position = std::distance(dataset.begin(), lb_result);
     if (lb_position != correct_idx) {
       std::cerr << "RMI returned incorrect result for lookup key " << x << std::endl;
@@ -125,10 +149,13 @@ void measure_perfomance() {
   PGMIndex<uint64_t, 64> index(dataset);
   auto pgm_ns = query_time([&index, &dataset](auto x, auto correct_idx) {
     auto approx_range = index.find_approximate_position(x);
-    auto lb_result = std::lower_bound(dataset.begin() + approx_range.lo,
-                                      dataset.begin() + approx_range.hi,
-                                      x);
-    
+
+#ifdef BRANCHLESS
+    auto lb_result = lower_bound_branchless(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi, x);
+#else
+    auto lb_result = std::lower_bound(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi, x);
+#endif
+
     size_t lb_position = std::distance(dataset.begin(), lb_result);
     if (lb_position != correct_idx) {
       std::cerr << "PGM returned incorrect result for lookup key " << x << std::endl;
