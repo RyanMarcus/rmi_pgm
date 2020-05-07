@@ -51,7 +51,9 @@ static std::vector<T> load_data(const std::string &filename) {
     return data;
 }
 
-std::vector<std::pair<uint64_t, size_t>> generate_queries(std::vector<uint64_t>& dataset) {
+// Use the below code to generate lookup keys drawn from the data keys. This ensures
+// that every part of the dataset is accessed equally.
+/*std::vector<std::pair<uint64_t, size_t>> generate_queries(std::vector<uint64_t>& dataset) {
   std::vector<std::pair<uint64_t, size_t>> results;
   results.reserve(NUM_LOOKUPS);
 
@@ -69,6 +71,32 @@ std::vector<std::pair<uint64_t, size_t>> generate_queries(std::vector<uint64_t>&
     results.push_back(std::make_pair(key, correct_lb));
   }
 
+  return results;
+  }*/
+
+// Use the below code to generate lookup keys drawn uniformly from the minimum
+// and maximum data key. This can lead to misleading results when the underlying dataset
+// has skew:
+//   consider a dataset where most values range between 0 and 2^50, but the last
+//   20 keys range between 2^51 and 2^64. Over 99% of uniformly drawn lookups will
+//   only access the last 20 keys.
+//
+// When this is the case, all you are really testing is your CPU cache. The FB dataset
+// demonstrates this.
+std::vector<std::pair<uint64_t, size_t>> generate_queries(std::vector<uint64_t>& dataset) {
+  std::vector<std::pair<uint64_t, size_t>> results;
+  results.reserve(NUM_LOOKUPS);
+  
+  std::mt19937 g(42);
+  std::uniform_int_distribution<uint64_t> distribution(dataset.front(), dataset.back() - 1);
+  
+  for (uint64_t i = 0; i < NUM_LOOKUPS; i++) {
+    uint64_t key = distribution(g);
+    size_t correct_lb = std::distance(dataset.begin(), std::lower_bound(dataset.begin(), dataset.end(), key));
+    
+    results.push_back(std::make_pair(key, correct_lb));
+  }
+  
   return results;
 }
 
@@ -116,6 +144,9 @@ void measure_perfomance() {
       std::cerr << "Start: " << start
                 << " Stop: " << stop
                 << " Correct: " << correct_idx << std::endl;
+      std::cerr << "Start  key: " << dataset[start] << std::endl;
+      std::cerr << "Stop   key: " << dataset[stop] << std::endl;
+      std::cerr << "Stop+1 key: " << dataset[stop+1] << std::endl;
       exit(-1);
     }
     return lb_position;
