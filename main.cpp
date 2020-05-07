@@ -193,7 +193,6 @@ void measure_perfomance() {
       std::cerr << "Start: " << approx_range.lo
                 << " Stop: " << approx_range.hi
                 << " Correct: " << correct_idx << std::endl;
-
       exit(-1);
     }
     return lb_position;
