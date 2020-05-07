@@ -1,4 +1,4 @@
-CXX_FLAGS=-std=c++17 -Wall -O3 -march=native
+CXX_FLAGS=-std=c++17 -Wall -O3 -march=native -fopenmp
 RMI_PARAMETERS=rmi_data/books_L1_PARAMETERS rmi_data/fb_L1_PARAMETERS rmi_data/osm_L1_PARAMETERS rmi_data/wiki_L1_PARAMETERS
 
 results.txt: benchmark execute.sh
