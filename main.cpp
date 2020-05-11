@@ -26,21 +26,32 @@ std::vector<std::string> DATASET_NAMES = {
   "data/fb_200M_uint64"
 };
 
-// Function taken from https://github.com/gvinciguerra/rmi_pgm/blob/357acf668c22f927660d6ed11a15408f722ea348/main.cpp#L29.
-// Authored by Giorgio Vinciguerra.
-template<class ForwardIt, class T, class Compare = std::less<T>>
-ForwardIt lower_bound_branchless(ForwardIt first, ForwardIt last, const T &value, Compare comp = Compare()) {
-    auto n = std::distance(first, last);
+// Adapted from https://github.com/gvinciguerra/rmi_pgm/blob/357acf668c22f927660d6ed11a15408f722ea348/main.cpp#L29.
+// Original code authored by Giorgio Vinciguerra.
+// Fixed semantics under negative lookups.
+template<class ForwardIt, class T>
+ForwardIt lower_bound_branchless(ForwardIt first, ForwardIt last, const T &value) {
+    int n = std::distance(first, last);
+    int lower = 0;
 
-    while (n > 1) {
-        auto half = n / 2;
-        __builtin_prefetch(&*first + half / 2, 0, 0);
-        __builtin_prefetch(&*first + half + half / 2, 0, 0);
-        first = comp(*std::next(first, half), value) ? first + half : first;
-        n -= half;
+    while (const int half = n / 2) {
+        const int middle = lower + half;
+	
+	// Prefetch next possible middles.
+	const void* next_middle1 = &*first + lower + half / 2;
+	const void* next_middle2 = &*first + middle + half / 2;
+	__builtin_prefetch(next_middle1, 0, 0);
+	__builtin_prefetch(next_middle2, 0, 0);
+
+	const T* middle_ptr = &*first + middle;
+	lower = (*middle_ptr <= value) ? middle : lower;
+	n -= half;
     }
 
-    return std::next(first, comp(*first, value));
+    // Scroll back to the first occurrence.
+    while (lower > 0 && *(&*first + lower - 1) == value) --lower;
+
+    return std::next(first, lower);
 }
 
 template<class T>
@@ -129,14 +140,15 @@ void measure_perfomance() {
     uint64_t stop = (guess + error >= data_size_ ? data_size_ : guess + error);
 
 #ifdef BRANCHLESS
-    auto lb_result = lower_bound_branchless(dataset.begin() + start, dataset.begin() + stop, x);
+    auto lb_result = lower_bound_branchless(dataset.begin() + start, dataset.begin() + stop + 1, x);
 #else
-    auto lb_result = std::lower_bound(dataset.begin() + start, dataset.begin() + stop, x);
+    auto lb_result = std::lower_bound(dataset.begin() + start, dataset.begin() + stop + 1, x);
 #endif
 
     size_t lb_position = std::distance(dataset.begin(), lb_result);
     if (lb_position != correct_idx) {
       std::cerr << "RMI returned incorrect result for lookup key " << x << std::endl;
+      std::cerr << "Returned idx (wrong): " << lb_position << std::endl;
       std::cerr << "Start: " << start
                 << " Stop: " << stop
                 << " Correct: " << correct_idx << std::endl;
@@ -151,9 +163,9 @@ void measure_perfomance() {
     auto approx_range = index.find_approximate_position(x);
 
 #ifdef BRANCHLESS
-    auto lb_result = lower_bound_branchless(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi, x);
+    auto lb_result = lower_bound_branchless(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi + 1, x);
 #else
-    auto lb_result = std::lower_bound(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi, x);
+    auto lb_result = std::lower_bound(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi + 1, x);
 #endif
 
     size_t lb_position = std::distance(dataset.begin(), lb_result);
