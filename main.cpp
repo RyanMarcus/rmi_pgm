@@ -18,6 +18,7 @@
 using timer = std::chrono::high_resolution_clock;
 
 uint64_t NUM_LOOKUPS = 10000000;
+uint64_t MAX_NUM_QUALIFYING = 100;
 
 std::vector<std::string> DATASET_NAMES = {
     "data/books_200M_uint64",
@@ -86,8 +87,7 @@ static std::vector<T> load_data(const std::string& filename) {
   return data;
 }
 
-template<typename T>
-static std::vector<Row> add_values(const std::vector<T>& keys) {
+static std::vector<Row> add_values(const std::vector<uint64_t>& keys) {
   std::vector<Row> result;
   result.reserve(keys.size());
   for (uint64_t i = 0; i < keys.size(); ++i) {
@@ -99,16 +99,31 @@ static std::vector<Row> add_values(const std::vector<T>& keys) {
   return result;
 }
 
-std::vector<std::pair<uint64_t, uint64_t>> generate_queries(const std::vector<Row>& dataset) {
+static std::vector<uint64_t> remove_duplicates(const std::vector<uint64_t>& data) {
+  std::vector<uint64_t> result = data;
+  auto last = std::unique(result.begin(), result.end());
+  result.erase(last, result.end());
+  return result;
+}
+
+std::vector<std::pair<uint64_t, uint64_t>> generate_queries(const std::vector<uint64_t>& keys,
+                                                            const std::vector<Row>& dataset) {
   std::vector<std::pair<uint64_t, uint64_t>> results;
   results.reserve(NUM_LOOKUPS);
 
-  std::mt19937 g(42);
-  std::uniform_int_distribution<size_t> distribution(0, dataset.size());
+  // Create set of keys.
+  const std::vector<uint64_t> unique_keys = remove_duplicates(keys);
 
-  for (uint64_t i = 0; i < NUM_LOOKUPS; i++) {
+  std::mt19937 g(42);
+  std::uniform_int_distribution<size_t> distribution(0, unique_keys.size());
+
+  size_t num_generated = 0;
+  while (num_generated < NUM_LOOKUPS) {
+    // Draw lookup key from unique keys.
     const size_t idx = distribution(g);
-    const uint64_t key = dataset[idx].key;
+    const uint64_t key = unique_keys[idx];
+
+    // Perform binary search on original keys.
     auto it = std::lower_bound(dataset.begin(),
                                dataset.end(),
                                key,
@@ -119,9 +134,20 @@ std::vector<std::pair<uint64_t, uint64_t>> generate_queries(const std::vector<Ro
 
     // Sum over all values with that key.
     uint64_t result = 0;
-    while (it++ != dataset.end() && it->key == key) result += it->value;
+    size_t num_qualifying = 0;
+    while (it++ != dataset.end() && it->key == key) {
+      result += it->value;
+      ++num_qualifying;
+    }
+
+    if (num_qualifying > MAX_NUM_QUALIFYING) {
+      // Too many qualifying entries.
+      // Try a different lookup key.
+      continue;
+    }
 
     results.push_back(std::make_pair(key, result));
+    ++num_generated;
   }
 
   return results;
@@ -152,7 +178,7 @@ void measure_performance() {
   const auto dataset = add_values(keys);
 
   //std::cout << "Generating queries..." << std::endl;
-  const std::vector<std::pair<uint64_t, uint64_t>> queries = generate_queries(dataset);
+  const std::vector<std::pair<uint64_t, uint64_t>> queries = generate_queries(keys, dataset);
 
   //std::cout << "Elements \t" << dataset.size() << std::endl;
   //std::cout << "RMI construct. \t" << build_time << " ns" << std::endl;
