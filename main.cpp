@@ -20,65 +20,65 @@ using timer = std::chrono::high_resolution_clock;
 uint64_t NUM_LOOKUPS = 10000000;
 
 std::vector<std::string> DATASET_NAMES = {
-  "data/books_200M_uint64",
-  "data/osm_cellids_200M_uint64",
-  "data/wiki_ts_200M_uint64",
-  "data/fb_200M_uint64"
+    "data/books_200M_uint64",
+    "data/osm_cellids_200M_uint64",
+    "data/wiki_ts_200M_uint64",
+    "data/fb_200M_uint64"
 };
 
 // Adapted from https://github.com/gvinciguerra/rmi_pgm/blob/357acf668c22f927660d6ed11a15408f722ea348/main.cpp#L29.
 // Original code authored by Giorgio Vinciguerra.
 // Fixed semantics under negative lookups.
 template<class ForwardIt, class T>
-ForwardIt lower_bound_branchless(ForwardIt first, ForwardIt last, const T &value) {
-    int n = std::distance(first, last);
-    int lower = 0;
+ForwardIt lower_bound_branchless(ForwardIt first, ForwardIt last, const T& value) {
+  int n = std::distance(first, last);
+  int lower = 0;
 
-    while (const int half = n / 2) {
-      const int middle = lower + half;
-	
-      // Prefetch next possible middles.
-      const void* next_middle1 = &*first + lower + half / 2;
-      const void* next_middle2 = &*first + middle + half / 2;
-      __builtin_prefetch(next_middle1, 0, 0);
-      __builtin_prefetch(next_middle2, 0, 0);
+  while (const int half = n / 2) {
+    const int middle = lower + half;
 
-      const T* middle_ptr = &*first + middle;
-      lower = (*middle_ptr <= value) ? middle : lower;
-      n -= half;
-    }
+    // Prefetch next possible middles.
+    const void* next_middle1 = &*first + lower + half / 2;
+    const void* next_middle2 = &*first + middle + half / 2;
+    __builtin_prefetch(next_middle1, 0, 0);
+    __builtin_prefetch(next_middle2, 0, 0);
 
-    // Scroll back to the first occurrence.
-    while (lower > 0 && *(&*first + lower - 1) == value) --lower;
+    const T* middle_ptr = &*first + middle;
+    lower = (*middle_ptr <= value) ? middle : lower;
+    n -= half;
+  }
 
-    return std::next(first, lower);
+  // Scroll back to the first occurrence.
+  while (lower > 0 && *(&*first + lower - 1) == value) --lower;
+
+  return std::next(first, lower);
 }
 
 template<class T>
-void do_not_optimize(T const &value) {
-    asm volatile("" : : "r,m"(value) : "memory");
+void do_not_optimize(T const& value) {
+  asm volatile("" : : "r,m"(value) : "memory");
 }
 
 template<typename T>
-static std::vector<T> load_data(const std::string &filename) {
-    std::vector<T> data;
+static std::vector<T> load_data(const std::string& filename) {
+  std::vector<T> data;
 
-    std::ifstream in(filename, std::ios::binary);
-    if (!in.is_open()) {
-        std::cerr << "unable to open " << filename << std::endl;
-        exit(EXIT_FAILURE);
-    }
+  std::ifstream in(filename, std::ios::binary);
+  if (!in.is_open()) {
+    std::cerr << "unable to open " << filename << std::endl;
+    exit(EXIT_FAILURE);
+  }
 
-    // Read size.
-    uint64_t size;
-    in.read(reinterpret_cast<char *>(&size), sizeof(uint64_t));
-    data.resize(size);
+  // Read size.
+  uint64_t size;
+  in.read(reinterpret_cast<char*>(&size), sizeof(uint64_t));
+  data.resize(size);
 
-    // Read values.
-    in.read(reinterpret_cast<char *>(data.data()), size * sizeof(T));
-    in.close();
+  // Read values.
+  in.read(reinterpret_cast<char*>(data.data()), size * sizeof(T));
+  in.close();
 
-    return data;
+  return data;
 }
 
 std::vector<std::pair<uint64_t, size_t>> generate_queries(std::vector<uint64_t>& dataset) {
@@ -87,15 +87,15 @@ std::vector<std::pair<uint64_t, size_t>> generate_queries(std::vector<uint64_t>&
 
   std::mt19937 g(42);
   std::uniform_int_distribution<size_t> distribution(0, dataset.size());
-  
+
   for (uint64_t i = 0; i < NUM_LOOKUPS; i++) {
     size_t idx = distribution(g);
     uint64_t key = dataset[idx];
     size_t correct_lb = std::distance(
-      dataset.begin(),
-      std::lower_bound(dataset.begin(), dataset.end(), key)
-      );
-    
+        dataset.begin(),
+        std::lower_bound(dataset.begin(), dataset.end(), key)
+    );
+
     results.push_back(std::make_pair(key, correct_lb));
   }
 
@@ -103,22 +103,21 @@ std::vector<std::pair<uint64_t, size_t>> generate_queries(std::vector<uint64_t>&
 }
 
 template<typename F, class V>
-size_t query_time(F f, const V &queries) {
+size_t query_time(F f, const V& queries) {
   auto start = timer::now();
-  
+
   uint64_t cnt = 0;
-  for (auto &q : queries) {
+  for (auto& q : queries) {
     cnt += f(q.first, q.second);
   }
   do_not_optimize(cnt);
-  
-    auto stop = timer::now();
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() / queries.size();
+
+  auto stop = timer::now();
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() / queries.size();
 }
 
-
 template<int dataset_idx, uint64_t build_time, size_t rmi_size,
-         uint64_t (* RMI_FUNC)(uint64_t, size_t*)>
+    uint64_t (* RMI_FUNC)(uint64_t, size_t*)>
 void measure_perfomance() {
   std::string dataset_name = DATASET_NAMES[dataset_idx];
   //std::cout << "Reading " << dataset_name << std::endl;
@@ -126,7 +125,7 @@ void measure_perfomance() {
 
   //std::cout << "Generating queries..." << std::endl;
   std::vector<std::pair<uint64_t, size_t>> queries = generate_queries(dataset);
-  
+
   //std::cout << "Elements \t" << dataset.size() << std::endl;
   //std::cout << "RMI construct. \t" << build_time << " ns" << std::endl;
   //std::cout << "RMI index size \t" << rmi_size << " bytes" << std::endl;
@@ -163,7 +162,8 @@ void measure_perfomance() {
     auto approx_range = index.find_approximate_position(x);
 
 #ifdef BRANCHLESS
-    auto lb_result = lower_bound_branchless(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi + 1, x);
+    auto
+        lb_result = lower_bound_branchless(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi + 1, x);
 #else
     auto lb_result = std::lower_bound(dataset.begin() + approx_range.lo, dataset.begin() + approx_range.hi + 1, x);
 #endif
@@ -185,22 +185,22 @@ void measure_perfomance() {
             << pgm_ns << std::endl;
 }
 
-int main(int argc, char **argv) {
-    // load each RMI
-    if (wiki::load("rmi_data/")
-        && fb::load("rmi_data/")
-        && osm::load("rmi_data/")
-        && books::load("rmi_data/")) {
-      // RMIs loaded.
-    } else {
-      std::cerr << "Failed to load RMIs" << std::endl;
-      exit(-1);
-    }
-    std::cout << "Dataset,RMI,PGM" << std::endl;
-    measure_perfomance<0, books::RMI_SIZE, books::BUILD_TIME_NS, books::lookup>();
-    measure_perfomance<1, osm::RMI_SIZE, osm::BUILD_TIME_NS, osm::lookup>();
-    measure_perfomance<2, wiki::RMI_SIZE, wiki::BUILD_TIME_NS, wiki::lookup>();
-    measure_perfomance<3, fb::RMI_SIZE, fb::BUILD_TIME_NS, fb::lookup>();
-    
-    return 0;
+int main(int argc, char** argv) {
+  // load each RMI
+  if (wiki::load("rmi_data/")
+      && fb::load("rmi_data/")
+      && osm::load("rmi_data/")
+      && books::load("rmi_data/")) {
+    // RMIs loaded.
+  } else {
+    std::cerr << "Failed to load RMIs" << std::endl;
+    exit(-1);
+  }
+  std::cout << "Dataset,RMI,PGM" << std::endl;
+  measure_perfomance<0, books::RMI_SIZE, books::BUILD_TIME_NS, books::lookup>();
+  measure_perfomance<1, osm::RMI_SIZE, osm::BUILD_TIME_NS, osm::lookup>();
+  measure_perfomance<2, wiki::RMI_SIZE, wiki::BUILD_TIME_NS, wiki::lookup>();
+  measure_perfomance<3, fb::RMI_SIZE, fb::BUILD_TIME_NS, fb::lookup>();
+
+  return 0;
 }
