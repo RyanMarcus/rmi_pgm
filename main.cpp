@@ -35,17 +35,17 @@ ForwardIt lower_bound_branchless(ForwardIt first, ForwardIt last, const T &value
     int lower = 0;
 
     while (const int half = n / 2) {
-        const int middle = lower + half;
+      const int middle = lower + half;
 	
-	// Prefetch next possible middles.
-	const void* next_middle1 = &*first + lower + half / 2;
-	const void* next_middle2 = &*first + middle + half / 2;
-	__builtin_prefetch(next_middle1, 0, 0);
-	__builtin_prefetch(next_middle2, 0, 0);
+      // Prefetch next possible middles.
+      const void* next_middle1 = &*first + lower + half / 2;
+      const void* next_middle2 = &*first + middle + half / 2;
+      __builtin_prefetch(next_middle1, 0, 0);
+      __builtin_prefetch(next_middle2, 0, 0);
 
-	const T* middle_ptr = &*first + middle;
-	lower = (*middle_ptr <= value) ? middle : lower;
-	n -= half;
+      const T* middle_ptr = &*first + middle;
+      lower = (*middle_ptr <= value) ? middle : lower;
+      n -= half;
     }
 
     // Scroll back to the first occurrence.
